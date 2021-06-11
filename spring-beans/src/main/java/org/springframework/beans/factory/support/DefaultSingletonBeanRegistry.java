@@ -176,12 +176,23 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param allowEarlyReference whether early references should be created or not
 	 * @return the registered singleton object, or {@code null} if none found
 	 */
+
+	/**
+	 *	三级缓存机制：
+	 *		一级缓存：singletonObjects，存放完全实例化属性赋值完成的Bean，直接可以使用
+	 *		二级缓存：earlySingletonObjects，存放早期Bean的引用，尚未属性装配的Bean
+	 *		三级缓存：singletonFactories，三级缓存，存放实例化完成的Bean工厂
+	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 		// Quick check for existing instance without full singleton lock
+
+		//先从一级缓存中查找，如果查不到，并且当前对象正在创建中，则中二级缓存中查找
 		Object singletonObject = this.singletonObjects.get(beanName);
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			singletonObject = this.earlySingletonObjects.get(beanName);
+
+			//如果二级缓存中不存在，并且允许从singletonFactories获取对象
 			if (singletonObject == null && allowEarlyReference) {
 				synchronized (this.singletonObjects) {
 					// Consistent creation of early reference within full singleton lock
@@ -191,6 +202,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 						if (singletonObject == null) {
 							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 							if (singletonFactory != null) {
+								//将对象从三级缓存移到二级缓存中去
 								singletonObject = singletonFactory.getObject();
 								this.earlySingletonObjects.put(beanName, singletonObject);
 								this.singletonFactories.remove(beanName);
